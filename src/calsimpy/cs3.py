@@ -20,9 +20,9 @@ import numpy as np
 import datetime as dt
 from collections import OrderedDict as Odict
 
-import cs_util as util
-import cs3gw
-import AuxFunctions as af
+from . import cs_util as util
+from . import cs3gw
+from . import AuxFunctions as af
     
 DEFAULTS = {
         'CSII': {

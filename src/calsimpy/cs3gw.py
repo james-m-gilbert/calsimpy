@@ -8,7 +8,7 @@ Created on Thu Oct  3 16:37:34 2019
 @author: jmgilbert
 """
 
-import cs_util as util
+from . import cs_util as util
 from collections import OrderedDict as odict
 
 import numpy as np
@@ -28,9 +28,9 @@ import datetime as dt
 M2_TO_FT2 = 100.*100./2.54/2.54/12./12.
 
 # import the DSS read/write libraries
-sys.path.append(r'C:\Users\jmgilbert\02_Projects\CalSim_Utilities\Python_Functions\Python_DSS')
-import dss3_functions_reference as dss
-import AuxFunctions as af
+import yapydss as dss
+
+from . import AuxFunctions as af
 
 
 from collections import OrderedDict as Odict
