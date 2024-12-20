@@ -1,5 +1,5 @@
 # ***calsimpy***: Functions to help with common CalSim data processing and analysis tasks
-## *CalSim can be hard, maybe Python can make some things a little easier*
+## *CalSim can be hard. Sometimes Python might make it a little easier....maybe...*
 
 This package includes a number of functions to work with CalSim (CalSimII, CalSim3, CalLite)
 data in an organized way within Python. 
@@ -10,7 +10,7 @@ reading and writing DSS files (requires a separate Python-based DSS wrapper - th
 package is currently built around the `yapydss` package [https://github.com/james-m-gilbert/yapydss]()), but components to read parts of the CalSim3 modeling chain (e.g. CalSimHydro input files and CalSim3/C2VSim groundwater model files) and some plotting functions have been developed as well.
 
 Much of what is in this package has been pieced together as specific needs arose in my day-to-day work
-over the laset ~6-7 years. 
+over the last ~6-7 years. 
 There are many other things I'd like to add, and probably a lot of the code that could use
 some cleanup and reorganization - not to mention that all of this needs some documentation!
 For that reason, this package should be considered very much in active development.
