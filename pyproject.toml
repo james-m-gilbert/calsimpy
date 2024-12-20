@@ -1,0 +1,29 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+
+[project]
+name = "calsimpy"
+version = "0.0.1"
+authors = [
+  { name="James Gilbert", email="james.gilbert@ucsc.edu" },
+]
+description = "CalSim can be hard. Sometimes Python can make it easier. Maybe..."
+readme = "README.md"
+requires-python = ">=3.7"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: BSD-3 License",
+    "Operating System :: OS Independent",
+]
+
+[project.urls]
+Homepage = "https://github.com/james-m-gilbert/calsimpy"
+Issues = "https://github.com/james-m-gilbert/calsimpy/issues"
+
+#[tool.setuptools.packages.find]
+#where = ["src"]
+
+[tool.setuptools.package-data]
+'*' = ["*.dll"]
