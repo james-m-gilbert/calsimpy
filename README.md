@@ -1,5 +1,5 @@
 # ***calsimpy***: Functions to help with common CalSim data processing and analysis tasks
-## *CalSim can be hard. This is my attempt to make some things easier*
+## *CalSim can be hard. This is my attempt to make (some) things easier*
 
 This package includes a number of functions to work with CalSim (CalSimII, CalSim3, CalLite)
 data in an organized way using Python. 
@@ -13,13 +13,17 @@ package is currently built around the `yapydss` package [https://github.com/jame
 Where possible, CalSim data is handled in common Python data structures (lists, dictionaries, Pandas DataFrames, and GeoDataFrames) so that any CalSim-derived data can be written out to files that can be used later or viewed with other software (e.g., csv, GIS shapefile, etc)
 
 Much of what is in this package has been pieced together in response to specific needs I have encountered in my work with CalSim over the last seven-ish years (and counting). 
-There are many other things I'd like to add, and probably a lot of the code that could use
-some cleanup and reorganization - not to mention that all of this needs some documentation!
-For that reason, this package should be considered very much in active development.
+This code has never been the _main_ project, but rather something I built to help me get to where I needed to go.
+It's not a polished final product - there are many other things I'd like to add, and a lot of the code that could use
+some cleanup and reorganization.
+And yes - all of this needs some documentation!
+
+**For that reason, this package should be considered very much in active development.
 I'm making it available in case others may find it useful, but cannot promise it will exactly 
-meet any one CalSim modeler's needs.
-If you find this package, test it out, and see areas for improvement or expansion, let me know 
-(james.gilbert [at] ucsc.edu) - I'm always open to constructive feedback and potential collaboration!
+meet any one CalSim modeler's needs or work for every task.**
+
+**If you find this package, test it out, and see areas for improvement or expansion, let me know 
+(james.gilbert [at] ucsc.edu) - I'm always open to constructive feedback and potential collaboration!**
 
 ## Installation
 
