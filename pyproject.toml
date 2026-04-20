@@ -9,7 +9,7 @@ version = "0.0.1"
 authors = [
   { name="James Gilbert", email="james.gilbert@ucsc.edu" },
 ]
-description = "CalSim can be hard. Sometimes Python can make it easier. Maybe..."
+description = "CalSim can be hard. This is my attempt to make some of it easier..."
 readme = "README.md"
 requires-python = ">=3.7"
 classifiers = [
