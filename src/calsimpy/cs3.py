@@ -247,7 +247,131 @@ class calsimhydro(object):
             
             return(final_df)
             
+    def write_to_dss(self, dssdf, dssfp, ts_startDate=None, ts_endDate=None,
+                use_double_precision=True, ctime24=True, debug=False):
+        ''' 
+        assumes a time series dataframe with dss-compatible columns has been created
+            writes out results to filepath=dssfp
             
+            dssdf: dataframe with dss-compatible multi-index column headers
+            
+            ts_startDate: datetime object indicating date of time series to start
+                          at for writing; if None (default) then the first value
+                          in the time series will serve as the start
+            
+            ts_endDate: datetime object indicating date of time series at which
+                        to end writing; if None (default), then the last value
+                        in the time series will serve as the end
+                        
+        '''
+        
+        if not type(dssdf) == pnd.core.frame.DataFrame:
+            print("Error - no valid dataframe provided - try again!")
+            return
+    
+        # check the column indexing to make sure we have what we need to write 
+        # to DSS
+        cols = dssdf.columns
+        colidxnames = cols.names
+        colidxnamesUPP = [u.upper() for u in colidxnames]
+        
+        reqd_pts = ['A','B','C','E','F', 'TYPE','UNITS']
+        
+        missingpts = [m for m in reqd_pts if m not in colidxnamesUPP ]
+        
+        if missingpts ==[]:
+            pass
+        elif missingpts ==['D']:
+            print("No D-part included in dataframe header index. Assuming this" +\
+                  " is not required for this time series. Tentatively proceeding..")
+        else:
+            print("The following parts are missing from the dataframe header\n " +\
+                  "and need to be provided to write to the DSS file:")
+            for m in missingpts:
+                print(m)
+            print("*** Exiting! ***")
+            return
+        
+        aidx = colidxnames.index('A')
+        bidx = colidxnames.index('B')
+        cidx = colidxnames.index('C')
+        eidx = colidxnames.index('E')
+        fidx = colidxnames.index('F')
+        typidx = colidxnamesUPP.index('TYPE')
+        unitidx = colidxnamesUPP.index('UNITS')
+        
+        # see if we can weed out extra columns that shouldnt' be written to DSS
+        # assuming 'orig_date' and 'WY' are ones to drop...TODO: add kwargs for
+        # specifying extra drop columns or filters
+        writecols = []
+        dropcols = ['orig_date', 'WY']
+        for c in cols:
+            if c[0] in dropcols or c[1]=='':
+                pass
+            else:
+                writecols.append(c)
+                
+        # create a DSS object
+        self.CSH_DSS = util.dssFile(fp=dssfp)
+    
+        # open the DSS file so we can write to it - this should create the
+        # file if it doesn't already exist
+        self.CSH_DSS.openDSS()
+    
+        # iterate through column indices, assemble path and write corresponding
+        # time series to DSS
+        for c in writecols:
+            #get data from dataframe for this variable and time slice, if needed
+            if ts_startDate == None and ts_endDate==None:
+                data = dssdf.loc[:,c]
+                cdate = dt.datetime.strftime(data.index[0], '%d%b%Y')
+            else:
+                if ts_endDate==None:
+                    fmt_stDate = dt.datetime.strftime(ts_startDate, '%Y-%m-%d')
+                    cdate = dt.datetime.strftime(ts_startDate, '%d%b%Y')
+                    data = dssdf.loc[fmt_stDate:,c]
+                elif ts_startDate==None:
+                    fmt_endDate =dt.datetime.strftime(ts_endDate, '%Y-%m-%d')
+                    data = dssdf.loc[:fmt_endDate,c]
+                    cdate = dt.datetime.strftime(data.index[0], '%d%b%Y')
+                else: #then use both ends of time slice
+                    fmt_stDate = dt.datetime.strftime(ts_startDate, '%Y-%m-%d')
+                    cdate = dt.datetime.strftime(ts_startDate, '%d%b%Y')
+                    fmt_endDate =dt.datetime.strftime(ts_endDate, '%Y-%m-%d')
+                    data = dssdf.loc[fmt_stDate:fmt_endDate, c]
+    
+            
+            if ctime24:
+                ctime='2400'
+            else:
+                ctime= dt.datetime.strftime(data.index[0], '%H%M')
+                
+            #cpath = '/'+'/'.join([c[aidx],c[bidx],c[cidx],'',c[eidx],c[fidx]]) + '/'
+            
+            # create a DSS variable object
+            tmpvar = util.dssVar(self.CSH_DSS, A=c[aidx], B=c[bidx],C=c[cidx],
+                                  D='', E=c[eidx], F=c[fidx])
+            if debug:
+                print("Cpath for variable is: " + tmpvar.Cpath)
+                
+            tmpvar.Type = c[typidx]
+            tmpvar.Units = c[unitidx]
+            tmpvar.RTS = list(data.values)
+            
+            # TODO: functionality to add/update coordinates and other supp info,
+            #      if desired for double-precision writing
+            coords = []
+            icdesc = []
+            csupp = ''
+            ctzone = 'PST'
+            tmpvar.SuppInfo = {'coords': coords, 'icdesc': icdesc, 'csupp':csupp, 'ctzone': ctzone}
+    
+            if debug:
+                print(use_double_precision)
+                
+            tmpvar.setRTS(cdate, ctime, dbl=use_double_precision)
+            
+        self.CSH_DSS.closeDSS()            
             
         
 class idc:
@@ -392,7 +516,10 @@ class idc:
                      isHistorical=False,
                      checkWetlands=True,
                      ctime24=True,
-                     ntimes=12):
+                     ntimes=12, **kwargs):
+        
+        if 'check_fpart' in kwargs:
+            check_fpart = kwargs['check_fpart']
         
         [FACTLN, DSSFL, fullDSSFL, lu_path_dict] = self.get_du_landuse_paths()
 
@@ -422,7 +549,7 @@ class idc:
             for iregn in dus:
                 du = self.IDC_Dict['DemandUnits'][iregn-1]
                 luID = 'WL'
-                cpath = '/CALSIM/%s_WL/LANDUSE//1MON/EXISTING/' %du
+                cpath = f'/CALSIM/{du}_WL/LANDUSE//1MON/{check_fpart}/'
                 
                 thisvar = util.dssVar(luDSS, cpath=cpath)
                 thisvar.getRTS(land_use_startDate, ctime24=True, ntimes=12)
@@ -471,33 +598,43 @@ class idc:
             nlu = ncrop+2
             grp = 0
             # first group is field capacity table - cols = crops (1-22); rows=du/iregn
-            fcdf = read_text_array(rlnc[grp*nregn:(grp+1)*nregn],columns=self.IDC_Dict['CropCodes'])
+            # no Wetland (WL) in the field capacity table
+            noWLcols = [cr for cr in self.IDC_Dict['CropCodes'] if cr != 'WL']
+            fcdf = read_text_array(rlnc[grp*nregn:(grp+1)*nregn],
+                                   columns=noWLcols) #self.IDC_Dict['CropCodes'])
             # then (ef)fective porosity
             grp =1 
-            efdf = read_text_array(rlnc[grp*nregn:(grp+1)*nregn], columns = self.IDC_Dict['CropCodes'])
+            efdf = read_text_array(rlnc[grp*nregn:(grp+1)*nregn], 
+                                   columns = noWLcols) #self.IDC_Dict['CropCodes'])
             #then curve number - although this is not used in the idc implementation in calsimhydro
             grp=2
-            cndf = read_text_array(rlnc[grp*nregn:(grp+1)*nregn], columns = self.IDC_Dict['CropCodes'])
+            cndf = read_text_array(rlnc[grp*nregn:(grp+1)*nregn], 
+                                   columns = noWLcols) #= self.IDC_Dict['CropCodes'])
             
             grp = 3
             # no native vegetation in the return flow specification, adjust columns appropariately
             noNVcols = [cr for cr in self.IDC_Dict['CropCodes'] if cr != 'NV']
-            icrfdf = read_text_array(rlnc[grp*nregn:(grp+1)*nregn], dtype='i',columns = noNVcols)
+            noNVWLcols = [cr for cr in noNVcols if cr != 'WL']
+            icrfdf = read_text_array(rlnc[grp*nregn:(grp+1)*nregn], dtype='i',
+                                     columns = noNVWLcols)
             
             grp=4
             # water use parameters - indexes for where to get reuse data/info
-            noURNVcols = [cr for cr in self.IDC_Dict['CropCodes'] if cr not in ['UR', 'NV']]
+            noURNVcols = [cr for cr in self.IDC_Dict['CropCodes'] if cr not in ['UR', 'NV','WL']]
             wuparcols = ['PERV', 'ICPRECIP'] + noURNVcols + ['ICRUFURB', 'FURDPRF','FURDPSR']
-            wupardf = read_text_array(rlnc[grp*nregn:(grp+1)*nregn], dtype='f',columns = wuparcols)
+            wupardf = read_text_array(rlnc[grp*nregn:(grp+1)*nregn], 
+                                      dtype='f',columns = wuparcols)
             
             grp=5
-            icinfilt = read_text_array(rlnc[grp*nregn:(grp+1)*nregn], dtype='i',columns = self.IDC_Dict['CropCodes'])
+            icinfilt = read_text_array(rlnc[grp*nregn:(grp+1)*nregn], dtype='i',
+                                       columns = noWLcols) # self.IDC_Dict['CropCodes'])
             endidx5 = (grp+1)*nregn
             
             # rooting depths by crop
             grp=6 
             rootdepConvFact = float(rlnc[endidx5].split()[0].strip())
-            rootdepDF = read_text_array(rlnc[endidx5+1:endidx5+1+nlu], dtype='f',columns=['RootingDepth_ft'])        
+            rootdepDF = read_text_array(rlnc[endidx5+1:endidx5+1+nlu], dtype='f',
+                                        columns=['RootingDepth_ft'])        
             
             # add the fc, ef, rootdep data to demand unit objects
             for idx,row in fcdf.iterrows():
@@ -818,7 +955,13 @@ def read_CSlookup(tablefp, coltypes=None,commentChar='!'):
 
     for l in rlnc[2:]:
         if '!' in l:
-            data1, cmnt = l.strip().split('!')
+            #20250718 - deal with multiple '!'
+            if l.count('!') >1:
+                delimidx = l.find('!')
+                data1 = l[0:delimidx]
+                cmnt = l[delimidx:]
+            else:
+                data1, cmnt = l.strip().split('!')
             data = data1.split() 
         else:
             cmnt=''
@@ -1077,7 +1220,25 @@ class calsim():
             self.StartDate = dt.datetime(self.StartYear, self.StartMonth, self.StartDay,0,0)
             self.EndDate = dt.datetime(self.StopYear, self.StopMonth, self.StopDay,0,0)
 
-        
+    def __repr__(self):
+        rstmt = '#######################################\n'
+        rstmt += f'CalSim object:\n'
+        if int(self.Version) ==3:
+            rstmt += '\tVersion: CalSim3\n'
+        elif int(self.Version) ==2:
+            rstmt += '\tVersion: CalSim2\n'
+        rstmt += '\tStudy Directory: ' + f'{self.projDir}\n'
+        rstmt += '\tMain file: ' + f'{os.path.basename(self.MainFile)}\n'
+        rstmt += '\tConfiguration:\n'
+        rstmt += '\t\t Start Year-Month-Day: ' + f'{self.StartYear}-{self.StartMonth}-{self.StartDay}\n'
+        rstmt += '\t\t End Year-Month-Day: ' + f'{self.EndYear}-{self.EndMonth}-{self.EndDay}\n'
+        rstmt += '\t\t DV Filename: ' + f'{os.path.basename(self.DV_FP)}\n'
+        rstmt += '\t\t SV Filename: ' + f'{os.path.basename(self.SV_FP)}\n'
+        rstmt += '\t\t DSS DV A Part: ' + f'{self.DV_A_Part}\n'
+        rstmt += '\t\t DSS F Part: '  + f'{self.F_Part}\n'
+        rstmt += '#######################################\n'
+        return rstmt
+    
     def getLaunchDict(self):
         if os.path.exists(self.LaunchFP):
             import xml.etree.ElementTree as ET
@@ -1572,6 +1733,11 @@ class csDVdata(calsim):
         self.PathList = None
         self.DVtsDF = None
         
+    def __repr__(self):
+        rstr = 'Decision Variable file - DSS object\n'
+        rstr += f'\t--> {self.csObj.DV_FP} '
+        return rstr
+    
     def getDVts(self, **kwargs):
         '''
             **kwargs:
@@ -1651,13 +1817,14 @@ class csDVdata(calsim):
                 
             if ('filt_method' in kwargs) & (kwargs['filt_method']=='regex'):
                 import re
-                print("Filtering path list using regular expressions")
+                print("\n\nFiltering path list using regular expressions")
                 filt_list_re = []
                 for fstr in kwargs['filter']:
                     print("trying filter string %s" %fstr)
                     r = re.compile(fstr, re.IGNORECASE)
                     filt_list_re.append(r)
-                    newList = list(filter(r.match, self.PathList))
+                    #newList = list(filter(r.match, self.PathList))
+                    newList = list(filter(r.search, self.PathList))
                     newPathList.append(newList)
                     print("...found %d matches" %len(newList))
                 newPathList = [item for sublist in newPathList for item in sublist]    #flatten out any lists within the big list
@@ -1736,6 +1903,12 @@ class csSVdata(calsim):
 #        ts_startDate = self.csObj.StartDate
 #        ts_endDate = self.csObj.EndDate
 
+        # option to add to rather than create a new data frame with this call
+        if 'append_dataframe' in kwargs:
+            appendDF = kwargs['append_dataframe']
+        else:
+            appendDF = False
+
         if not os.path.exists(self.csObj.SV_FP):
             print("Couldn't find SV file {0}".format(self.csObj.SV_FP))
             return(-1)
@@ -1776,7 +1949,8 @@ class csSVdata(calsim):
                     print("trying filter string %s" %fstr)
                     r = re.compile(fstr)
                     filt_list_re.append(r)
-                    newList = list(filter(r.match, self.PathList))
+                    #newList = list(filter(r.match, self.PathList))
+                    newList = list(filter(r.search, self.PathList))
                     newPathList.append(newList)
                     print("...found %d matches" %len(newList))
                 newPathList = [item for sublist in newPathList for item in sublist]    #flatten out any lists within the big list
@@ -1796,6 +1970,7 @@ class csSVdata(calsim):
         i = 0
         numPaths = len(newPathList)
         for cpath in newPathList:
+            #input(f"Retrieving data for {cpath}..")
             #print("Retrieving data for: {0}".format(cpath))
             # provide a progress bar in the console
             util.progress(i,numPaths, status='Retrieving %s SV Time Series' %(numPaths))
@@ -1815,7 +1990,9 @@ class csSVdata(calsim):
                 print("using extended end date: %s" %tmpvar.RecordEnd)
                 ts_endDate = tmpvar.RecordEnd
             
-            self.initSVDF(startDate=ts_startDate, endDate=ts_endDate)
+            # check if we already have some data or if we want to start fresh
+            if isinstance(self.SVtsDF,type(None)) or not appendDF :
+                self.initSVDF(startDate=ts_startDate, endDate=ts_endDate, overwrite=True)
             
             tmpvar.getRTS(ts_startDate,ctime24=True, endDateTime=ts_endDate)
             # tmpDF = pnd.DataFrame(tmpvar.RTS)
@@ -1830,15 +2007,27 @@ class csSVdata(calsim):
             # listDF.append(tmpDF)
             # self.SVtsDF[ptA, ptB, ptC, ptE, ptF, tmpvar.RecordType,
             #             tmpvar.Units] = tmpvar.RTS
-            tmpDF = self.SVtsDF.copy()
+            #tmpDF = pnd.DataFrame().reindex_like(self.SVtsDF) #.copy()
+            tmpDF = self.initSVDF(startDate=ts_startDate, endDate=ts_endDate, 
+                                  overwrite=False) # get a blank DF 
             tmpDF[ptA, ptB, ptC, ptE, ptF, tmpvar.RecordType,
                          tmpvar.Units] = tmpvar.RTS
             listDF.append(tmpDF)
             i +=1
-        self.SVtsDF = pnd.concat(listDF, axis='columns', join='outer')
+            
+        if isinstance(self.SVtsDF,type(None)) or not appendDF:
+            self.SVtsDF = pnd.concat(listDF, axis='columns', join='outer')
+        else:
+            tmpdf_ = pnd.concat(listDF, axis='columns', join='outer')
+            #return(tmpdf_)
+            #copySVtsDF = self.SVtsDF.copy(deep=True)
+            #print(copySVtsDF.columns)
+            #print(tmpdf_.columns)
+            self.SVtsDF = self.SVtsDF.join(tmpdf_, how='left',)
+            
         self.SV_DSS.closeDSS()
 
-    def initSVDF(self, startDate=None, endDate=None):
+    def initSVDF(self, startDate=None, endDate=None, overwrite=True):
         # TODO: this assumes all data are 1-monthly values; 
         #       find a way to handle data with different time resolution
         
@@ -1861,7 +2050,10 @@ class csSVdata(calsim):
                              codes=[[]]*7,
                              names=[u'A', u'B', u'C',u'E',u'F',u'Type',u'Units'])
 
-        self.SVtsDF = pnd.DataFrame(index=dtList, columns = col_mindex )
+        if overwrite:
+            self.SVtsDF = pnd.DataFrame(index=dtList, columns = col_mindex )
+        else:
+            return(pnd.DataFrame(index=dtList, columns = col_mindex ))
 
 
     def setSVts(self, dssfp, ts_startDate=None, ts_endDate=None,

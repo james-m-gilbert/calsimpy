@@ -394,6 +394,11 @@ class cs_analysis:
         if type(title)!=list:
             title = [title]
             
+        if 'metric_axis' in kwargs:
+            metric_axis = kwargs['metric_axis']
+        else:
+            metric_axis = True
+            
         excd_data = {}
         var_cntr = 0
         for var, dictDF in self.Staged.items():   # iterate through the staged variables, each one having a set of dataframes
@@ -529,11 +534,12 @@ class cs_analysis:
                     
                     
                     if finUnits.upper() =='TAF':
-                        ax2 = ax.secondary_yaxis( -0.12, functions=(taf_to_mcm, mcm_to_taf))
-                        ax2.yaxis.set_major_locator(AutoLocator()) #tkr.MultipleLocator(1))
-                        ax2.yaxis.set_minor_locator(AutoMinorLocator()) #tkr.MultipleLocator(0.2))
-                        ax2.set_ylabel('Million cubic meters',fontsize=14)
-                        plt.subplots_adjust(left=0.18)
+                        if metric_axis:
+                            ax2 = ax.secondary_yaxis( -0.12, functions=(taf_to_mcm, mcm_to_taf))
+                            ax2.yaxis.set_major_locator(AutoLocator()) #tkr.MultipleLocator(1))
+                            ax2.yaxis.set_minor_locator(AutoMinorLocator()) #tkr.MultipleLocator(0.2))
+                            ax2.set_ylabel('Million cubic meters',fontsize=14)
+                            plt.subplots_adjust(left=0.18)
                     
                     if month_filter != []:
                         monthTitle = "months: "
@@ -658,12 +664,29 @@ class cs_analysis:
                     else:
                         newUnits = origUnits
                     
-                    dftmp = df.copy()         
+                    dftmp_ = df.copy()         
                     
                     if origUnits.upper() =='TAF' and newUnits.upper()=='CFS':
-                        dftmp = taf_to_cfs(dftmp)
+                        dftmp_ = taf_to_cfs(dftmp_)
                     if origUnits.upper()=='CFS' and newUnits.upper()=='TAF':
-                        dftmp = cfs_to_taf(dftmp)
+                        dftmp_ = cfs_to_taf(dftmp_)
+                    
+                    # check for annual filters - this filters out specific years
+                    if annual_filter == []:
+
+                        annfilt = dftmp_
+                    else:
+                        if type(annual_filter)==dict: # it's lists for each scenario
+                            this_annual_filter = annual_filter[scen]
+                        else:
+                            this_annual_filter = annual_filter
+                        if annual_filter_type.upper() in ["WY","WATERYEAR","WATER YEAR"]:
+                            annfilt = dftmp_[dftmp_.WY.isin(this_annual_filter)]
+                        else:
+                            annfilt = dftmp_[dftmp_.index.year.isin(this_annual_filter)]  #??? This only filters on calendar year - 
+                                                                         # TODO: will need to add a way to do water year or delivery year
+                                                                         # type filters
+                    dftmp = annfilt
                     
                     # do the 'patternizing' to get the DF set up the way we need it
                     patDF = patternizer(dftmp, reference=pattern_type)
@@ -961,6 +984,7 @@ class cs_analysis:
                     
                     colr = self.Studies[scen].Color
                     lab = self.Studies[scen].ShortName
+                    ls = self.Studies[scen].LineStyle
                     
                     if 'labels' in kwargs:
                         if kwargs['labels'].lower() in ['desc','description','descr']:
@@ -983,10 +1007,10 @@ class cs_analysis:
                         hilite_yrs = hl_wy[d]
                         
                         for yr in hilite_yrs:
-                            ax[i].axvspan(yr[1], yr[2], alpha=0.1, facecolor='0.8',edgecolor="None")
+                            ax[i].axvspan(yr[1], yr[2], alpha=0.1, facecolor='0.4',edgecolor="None")
                         
                         ax[i].step(data.index, data.iloc[:,0], where='post', 
-                          color=colr,
+                          color=colr,ls = ls,
                           label=lab,lw=lw)
                         
                         ax[i].xaxis.set_minor_locator(mdates.YearLocator())
@@ -1022,7 +1046,10 @@ class cs_analysis:
             # plt.legend(bbox_to_anchor=[axbox.x0-0.05*axbox.width, axbox.y0-0.06,0.6, 0.15], 
             #            bbox_transform=fig.transFigure,
             #            ncol=3,frameon=False, fontsize=10)
-            legcols = nscens%2 + nscens//2
+            if nscens==2:
+                legcols=2
+            else:
+                legcols = nscens%2 + nscens//2
             h1, l1 = ax[0].get_legend_handles_labels()
             fig.legend(h1, l1, loc="outside lower center",fontsize=13, ncol=legcols )
             plt.subplots_adjust(bottom=0.15,top=0.95,hspace=0.55)
@@ -1207,7 +1234,7 @@ class cs_analysis:
                             
                             for yr in hilite_yrs:
                                 ax[i].axvspan(yr[1], yr[2], alpha=0.1, 
-                                              facecolor='0.8',edgecolor="None")
+                                              facecolor='0.4',edgecolor="None")
                             
                             if 'step' in kwargs:
                                 ax[i].step(data.index, data.iloc[:,0], where='post', 
@@ -1969,3 +1996,206 @@ def plot_exceed(df, title, annualize_on='A-Sep', how='auto-sum',bl_id = "",
     else:
         return(fig_dict)        
     
+def plot_annual_exceed_shaded_pctile(df,varname, title,addWY=False, annualize_on='A-Sep', 
+                                     how='auto-sum',
+                       month_filter=[],annual_filter=[],
+                       annual_filter_type="WY",
+                       annual_filter_label="", **kwargs):
+
+    '''
+        month_filter: will plot exceedance based on just months meeting filter criteria (e.g. month_filter=[9] will include only September)
+        annual filter: will plot exceedance based on just years meeting filter criteria
+        
+        
+        kwargs:
+            'reverse_x': reverses x-axis (exceedance probabilities) so that 100% is at the left
+    '''
+    fig_dict = {}
+    
+    if 'exclude' in kwargs:
+        exclude_scen = kwargs['exclude']
+    else:
+        exclude_scen = []
+        
+    if type(title)!=list:
+        title = [title]
+        
+    if 'bl_col' in kwargs:
+        bl_col = kwargs['bl_col']
+    else:
+        bl_col = None
+        
+    if 'units' in kwargs:
+        origUnits = kwargs['units']
+    else:
+        origUnits = None
+        
+    if 'custom_ylabel' in kwargs:
+        custom_ylabel = kwargs['custom_ylabel']
+    else:
+        custom_ylabel = None
+        
+    var_cntr = 0
+
+    numpctiles = 11
+    from matplotlib import cm
+    colormap = cm.Blues
+    
+    pctiles = np.linspace(0, 100, numpctiles)
+    
+    #master_df = pnd.DataFrame(index=dictDF[list(dictDF.keys())[0]].index)
+    master_list = []
+    nscens = len(df.columns) # number of scenarios
+    cntr = 0
+    dftmp = df.copy()
+    for scen in dftmp.columns:   # iterate through the scenarios and dataframes
+    
+        print(scen)
+        if scen in exclude_scen:
+            continue
+        
+        if scen==bl_col:
+            bl_scen = scen
+            isBaseline=True
+            thiszorder = 9999
+        else:
+            isBaseline=False
+            thiszorder = 0
+        
+        #origUnits = df.columns.get_level_values('Units')[0]
+
+        if addWY:
+            dftmp['WY'] = dftmp.index.map(af.addWY)
+        
+            dftmp = dftmp.loc['1921-10-31':'2021-09-30',:]
+        # FIRST: filter out jsut the years or months desired
+        
+        # check for annual filters - this filters out specific years
+        if annual_filter == []:
+            annfilt = dftmp
+        else:
+            if annual_filter_type.upper() in ["WY","WATERYEAR","WATER YEAR"]:
+                annfilt = dftmp[dftmp.WY.isin(annual_filter)]
+            else:
+                annfilt = dftmp[dftmp.index.year.isin(annual_filter)]  #??? This only filters on calendar year - 
+                                                             # TODO: will need to add a way to do water year or delivery year
+                                                             # type filters
+        
+        # check for month filters - this selects for specific months
+        if month_filter == []:
+            monfilt = annfilt
+        else:
+            monfilt = annfilt[annfilt.index.month.isin(month_filter)]
+            
+        # drop the WY column to avoid the hassle of carrying that around
+        #print(monfilt.head())
+        if 'WY' in monfilt.columns:
+            filt = monfilt.drop(columns=['WY'])
+        else:
+            filt = monfilt
+        
+        # SECOND: now do the aggregation/annualization
+        if annualize_on != None:
+            agg_df= annualize(filt, on=annualize_on, how=how, 
+                              colindex=[0], )
+            finUnits = agg_df.columns.get_level_values('Units')[0]
+        else:
+            agg_df = filt
+            finUnits = origUnits
+                    
+        excd_df = single_exceed(agg_df, scen) #agg_df.columns[0])
+        
+        if isBaseline:
+            baseline_df = excd_df
+        else:
+            if cntr==0:
+                master_df = pnd.DataFrame(index=excd_df.index)
+                master_df[scen] = excd_df
+
+            else:
+                master_df[scen] =  excd_df
+            #master_list.append(excd_df.iloc[0:].values)
+            cntr+=1
+        
+    #master_df = pnd.DataFrame(data=master_list, index=excd_df.index)
+
+    sdist = np.zeros((len(master_df), numpctiles))
+    for i in range(numpctiles):
+        for t,d in enumerate(master_df.index):
+            sdist[t, i] = np.percentile(master_df.loc[d,:], pctiles[i])
+    maxt = sdist[:,-1]
+    mint = sdist[:, 0]
+    half = int((numpctiles-1)/2)
+
+    with sns.plotting_context('notebook', font_scale=1.5):
+        fig, ax = plt.subplots(1,1, figsize=(11,8))
+        ax.plot(master_df.index, sdist[:, half], c='k', label='Ensemble Median')
+        ax.plot(master_df.index, np.mean(master_df, axis=1), ls='--',lw=2, c='k', label='Ensemble Mean')
+        ax.plot(baseline_df.index, baseline_df.values,c='darkred', lw=2, label='Baseline')
+        for i in range(half):
+            ax.fill_between(master_df.index, sdist[:,i], sdist[:,-(i+1)], 
+                            color=colormap(i/half))
+        ax.plot(master_df.index, mint, lw=0.5, c='k')
+        ax.plot(master_df.index, maxt, lw=0.5, c='k')
+
+        ax.set_xlabel('Exceedance probability')
+        
+        if 'reverse_x' in kwargs:
+            if kwargs['reverse_x']:
+                ax.invert_xaxis()
+                
+        ax.xaxis.set_major_formatter(PercentFormatter(1.0))
+        ax.xaxis.set_major_locator(MultipleLocator(0.1))
+        ax.xaxis.set_minor_locator(AutoMinorLocator())
+        ax.yaxis.set_minor_locator(AutoMinorLocator())
+        
+        if finUnits.upper() in ['TAF','AF','ACRE-FEET']:
+            ax.set_ylabel('Annual Volume (%s)' %finUnits)
+        elif custom_ylabel!=None:
+            ax.set_ylabel(f'{custom_ylabel}, {finUnits}')
+        else:
+            ax.set_ylabel('Annual Average Flow (%s)' %finUnits)   #TODO: this is just a placeholder - need to add ability to deal with cfs, EC, other units and aggregations
+        
+        if month_filter != []:
+            monthTitle = "months: "
+            for m in month_filter:
+                if len(month_filter)==1:
+                    monthTitle = f"{dt.date(2020,m,1):%B}"
+                else:
+                    monthTitle += "%s, " %month_dict[m]
+        else:
+            monthTitle = ""
+        
+        if annual_filter != [] and annual_filter_label !="":
+            annTitle = annual_filter_label
+        elif annual_filter != []:
+            annTitle = "Select years"
+        else:
+            annTitle = ""
+            
+        if annTitle=="":
+            sep=''
+        else:
+            sep='-'
+        full_title = title[var_cntr] + " Annual Exceedance\n%s %s %s" %(annTitle,sep, monthTitle)
+        ax.set_title(full_title, fontsize=14, fontweight='bold')
+        
+        plt.legend(loc='best', frameon=False)
+    
+    var_cntr+=1
+        
+    # if nscens > 7:
+    #     h1, l1 = ax.get_legend_handles_labels()
+    #     h2 = [h1[0]]+[h1[1]] # get baseline + first realization handles
+    #     l2 = [l1[0]] + ['realizations']
+    #     plt.legend(h2,l2, bbox_to_anchor=(0.2,-0.25, 0.6, 0.15), ncol=2,
+    #                frameon=False, fontsize=11)
+    # else:
+    #     legcols = nscens%2 + nscens//2
+    #     plt.legend(bbox_to_anchor=(0.2,-0.25, 0.6, 0.15), ncol=legcols,frameon=False, fontsize=11)
+        
+    plt.subplots_adjust(bottom=0.22,top=0.90) #,hspace=0.55)
+    sns.despine()
+    fig_dict[varname] = [fig, ax]        
+
+    return(fig_dict)

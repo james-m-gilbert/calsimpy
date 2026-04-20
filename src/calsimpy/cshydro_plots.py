@@ -147,7 +147,8 @@ def patternPlot(patDF, indexCol='', xLabelCol='Month',xLabelFmt='%b'):
 
 
 #%% Plot the total applied water and sources (GP, net deliveries)  
-def plot_AppliedWater_Annual(duID, csDF, cshDF, contract_type, year_agg_method=2):    
+def plot_AppliedWater_Annual(duID, csDF, cshDF, contract_type, year_agg_method=2,
+                             with_gross_deliv=False):    
     
     '''
         assumes csDF is a dataframe of calsim delivery results with columns
@@ -158,6 +159,9 @@ def plot_AppliedWater_Annual(duID, csDF, cshDF, contract_type, year_agg_method=2
         
         
         # year_agg_method: 1 = Water year (Oct-Sep); 2 = Contract year (Mar-Feb)
+        
+        'with_gross_deliv' option - if True, adds light blue bars with gross delivery 
+        amounts
         
     '''
    
@@ -242,6 +246,8 @@ def plot_AppliedWater_Annual(duID, csDF, cshDF, contract_type, year_agg_method=2
             sw_colors.reverse()
             cm = sw_colors[1:] + gw_color
         
+
+        
         gpCols = [s for i, s in enumerate(cs3_ann.columns) if 'GP' in s.upper()]
         
         if len(gpCols)==1:
@@ -257,6 +263,12 @@ def plot_AppliedWater_Annual(duID, csDF, cshDF, contract_type, year_agg_method=2
                               lw=0.,step='post', color=cm[n],alpha=0.99,
                               label =c[1])    #'_'.join(c.split('_')[0:-2]) )
             prev = cs3_ann[c[0]]+prev
+            
+        dgCols = [s for i, s in enumerate(cs3_ann.columns) if 'DG' in s.upper()]
+        dgTot = cs3_ann.loc[:, dgCols].sum(axis=1)
+        if with_gross_deliv:
+                axes.fill_between(cs3_ann.index, 0, dgTot, lw=0.0, step='post',
+                                  color='lightblue', alpha=0.5, label='Gross Delivery')
     
         handles, labels = axes.get_legend_handles_labels()
         handles2 = []

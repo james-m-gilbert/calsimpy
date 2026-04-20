@@ -685,10 +685,16 @@ class gwResults(cs3gw):
             
         gwresDSS.closeDSS()
         
-    def getGWDeepPerc(self, gw_startDate = None, gw_endDate = None, ctime24=True):
+    def getGWDeepPerc(self, gw_startDate = None, gw_endDate = None, ctime24=True,
+                      reorg=True):
         
         # set up path to results file that has element-by-element results
-        resultsFP = os.path.join(self.Model.ProjectDir, 'CONV','DSS',self.Model.GWMain[1][18][1])
+        if reorg:
+            resultsFP = os.path.join(self.Model.ProjectDir,'DSS','output', 
+                                     self.Model.GWMain[1][18][1])    
+        else:
+            resultsFP = os.path.join(self.Model.ProjectDir, 'CONV','DSS',
+                                     self.Model.GWMain[1][18][1])
         
         if not os.path.exists(resultsFP):
             print("Specified results file %s does not exist...nothing can be done now..." %resultsFP)
@@ -741,10 +747,15 @@ class gwResults(cs3gw):
             
         gwresDSS.closeDSS()
         
-    def getGWHead(self, gw_startDate = None, gw_endDate = None, ctime24=True):
+    def getGWHead(self, gw_startDate = None, gw_endDate = None, ctime24=True, reorg=False):
         
         # set up path to results file that has element-by-element results
-        resultsFP = os.path.join(self.Model.ProjectDir, 'CONV','DSS',self.Model.GWMain[1][16][1])
+        if reorg:
+            resultsFP = os.path.join(self.Model.ProjectDir, 'DSS','output', 
+                                     self.Model.GWMain[1][16][1])
+        else:
+            resultsFP = os.path.join(self.Model.ProjectDir, 'CONV','DSS',
+                                     self.Model.GWMain[1][16][1])
         
         if not os.path.exists(resultsFP):
             print("Specified results file %s does not exist...nothing can be done now..." %resultsFP)
