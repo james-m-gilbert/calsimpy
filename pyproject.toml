@@ -18,7 +18,7 @@ classifiers = [
     "Operating System :: OS Independent",
 ]
 dependencies = [
-  "yapydss @ git+https://github.com/james-m-gilbert/yapydss" 
+  "yapydss @ git+https://github.com/james-m-gilbert/yapydss", 
   "numpy<2.5,>=1.23.5",
   "pandas>=1.5.3",
   "PyYaml>=6.0",

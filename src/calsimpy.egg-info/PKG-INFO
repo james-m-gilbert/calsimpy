@@ -1,16 +1,30 @@
 Metadata-Version: 2.4
 Name: calsimpy
 Version: 0.0.1
-Summary: CalSim can be hard. Sometimes Python can make it easier. Maybe...
+Summary: CalSim can be hard. This is my attempt to make some of it easier...
 Author-email: James Gilbert <james.gilbert@ucsc.edu>
 Project-URL: Homepage, https://github.com/james-m-gilbert/calsimpy
 Project-URL: Issues, https://github.com/james-m-gilbert/calsimpy/issues
 Classifier: Programming Language :: Python :: 3
 Classifier: License :: OSI Approved :: BSD-3 License
 Classifier: Operating System :: OS Independent
-Requires-Python: >=3.7
+Requires-Python: >=3.8
 Description-Content-Type: text/markdown
 License-File: LICENSE
+Requires-Dist: yapydss @ git+https://github.com/james-m-gilbert/yapydss
+Requires-Dist: numpy<2.5,>=1.23.5
+Requires-Dist: pandas>=1.5.3
+Requires-Dist: PyYaml>=6.0
+Requires-Dist: matplotlib!=3.6.1,>=3.4
+Requires-Dist: seaborn
+Requires-Dist: jinja
+Requires-Dist: openpyxl
+Requires-Dist: pyproj
+Requires-Dist: shapely
+Requires-Dist: geopandas
+Requires-Dist: et_xmlfile
+Requires-Dist: fiona
+Requires-Dist: geojson
 Dynamic: license-file
 
 # ***calsimpy***: Functions to help with common CalSim data processing and analysis tasks
@@ -38,13 +52,17 @@ If you find this package, test it out, and see areas for improvement or expansio
 
 ## Installation
 
-TODO
+A more detailed set of installation instructions are coming soon.
+If you're brave and want to try installing the package in it's current state, you can `pip` to install directly from GitHub using:
+`pip install git+https://github.com/james-m-gilbert/calsimpy.git`
+
+Note - there may still be some bugs related to dependencies. I am working on a more streamlined package and hope to have updates soon.
 
 
 ## Concepts & Basic Workflow
-TODO
+Coming soon - check back for updates!
 
 
 ## Function Documentation
 
-TODO
+Coming soon - check back for updates!

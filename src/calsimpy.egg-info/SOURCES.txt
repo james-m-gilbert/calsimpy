@@ -11,4 +11,5 @@ src/calsimpy/cshydro_plots.py
 src/calsimpy.egg-info/PKG-INFO
 src/calsimpy.egg-info/SOURCES.txt
 src/calsimpy.egg-info/dependency_links.txt
+src/calsimpy.egg-info/requires.txt
 src/calsimpy.egg-info/top_level.txt
