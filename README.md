@@ -33,11 +33,12 @@ If you're brave and want to try installing the package in it's current state, yo
 
 Note - there may still be some bugs related to dependencies. I am working on a more streamlined package and hope to have updates soon.
 
+## Documentation Page
 
-## Concepts & Basic Workflow
-Coming soon - check back for updates!
+A separate page that provides documentation and examples for using CalSimPy has been posted here: https://james-m-gilbert.github.io/calsimpy-docs.
+
+The documentation site is not complete, but I'll be adding to it as time and funding allow.
+The site currently contains some introductory examples for working with the CalSim object and SV and DV data.
 
 
-## Function Documentation
 
-Coming soon - check back for updates!
