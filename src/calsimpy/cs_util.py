@@ -8,9 +8,7 @@ Created on Fri Oct  4 11:25:50 2019
 import re, os, sys
 import pandas as pnd
 
-#sys.path.append(r'C:\Users\jgilbert\01_Programs\Excel DSS Add-in V3.3.jmg\libraries\64-bit')
-sys.path.append('D:\\02_Projects\\CalSim\\util\\CalSim_Utilities\\Python_Functions\\Python_DSS')
-import dss3_functions_reference as dss
+import yapydss as dss
 import AuxFunctions as af
 
 import datetime as dt
@@ -490,7 +488,7 @@ class wresl_util:
             else:
                 #print("shouldnt' be here")
                 # remove comments here first before we do anything else
-                l = removeComments(l)
+                l = wresl_util.removeComments(l)
                 cstrt = l.find('continuity')
                 cend = l.find('{')
                 nodeName = l[cstrt+10:cend].strip()
