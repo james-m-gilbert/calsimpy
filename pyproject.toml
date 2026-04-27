@@ -11,13 +11,28 @@ authors = [
 ]
 description = "CalSim can be hard. This is my attempt to make some of it easier..."
 readme = "README.md"
-requires-python = ">=3.7"
+requires-python = ">=3.8"
 classifiers = [
     "Programming Language :: Python :: 3",
     "License :: OSI Approved :: BSD-3 License",
     "Operating System :: OS Independent",
 ]
-
+dependencies = [
+  "yapydss @ git+https://github.com/james-m-gilbert/yapydss" 
+  "numpy<2.5,>=1.23.5",
+  "pandas>=1.5.3",
+  "PyYaml>=6.0",
+  "matplotlib!=3.6.1,>=3.4",
+  "seaborn",
+  "jinja",
+  "openpyxl",
+  "pyproj",
+  "shapely",
+  "geopandas",
+  "et_xmlfile",
+  "fiona",
+  "geojson",
+]
 [project.urls]
 Homepage = "https://github.com/james-m-gilbert/calsimpy"
 Issues = "https://github.com/james-m-gilbert/calsimpy/issues"
